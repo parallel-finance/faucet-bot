@@ -1,4 +1,4 @@
-### Faucet Bot For Acala
+### Faucet Bot For Parallel
 
 ### Environment Required
 1. nodejs
