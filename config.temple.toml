@@ -7,28 +7,21 @@ redis = "redis://127.0.0.1:6379"
 maxPendingCount = 20
 
 [faucet]
-endpoint = "ENDPOINT"
+endpoint = "ws://127.0.0.1:9944" # your endpoint
 precision = 18
-assets = ['ACA', 'AUSD']
+assets = ['KSM', 'USDT'] # your assets
 
 [faucet.account]
-mnemonic = "CUSTOM MNEMONIC"
+mnemonic = "your mnemonic"
   
 [faucet.strategy]
 [faucet.strategy.normal]
 amounts = [
-  { asset = 'ACA', amount = 2 },
-  { asset = 'AUSD', amount = 2000 }
+  { asset = 'KSM', amount = 1 },
+  { asset = 'USDT', amount = 1 }
 ]
 limit = 2
 frequency = ["1", "day"]
-
-[faucet.strategy.ren]
-amounts = [
-  { asset = 'RENBTC', amount = 0.2 }
-]
-limit = 10
-frequency = ["1", "month"]
 
 [channel]
 [channel.api]
@@ -41,12 +34,14 @@ token = "TEST_TOKEN"
 userId = "@test-bot:matrix.org"
 limit = 2
 frequency = ["1", "day"]
+enable = false # No Matrix server yet
 
 [channel.discord]
-activeChannelName = 'faucet-test-channel'
-token = "TEST_TOKEN"
+activeChannelName = 'faucet'
+token = "your-token"
 limit = 2
 frequency = ["1", "day"]
+enable = true
 
 [template]
 usage = """
