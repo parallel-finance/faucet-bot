@@ -3,6 +3,7 @@ import { Storage } from "../util/storage";
 import { Service } from "../services";
 import { Config } from "../util/config";
 import { ChannelBase } from "./base";
+import logger from "../util/logger";
 
 interface DiscordChannelConfig {
   config: Config["channel"]["discord"];
@@ -28,7 +29,9 @@ export class DiscordChannel extends ChannelBase {
   }
 
   async start() {
-    await this.client.login(this.config.token);
+    await this.client.login(this.config.token).then(() => {
+      logger.info(`🚀 discord bot login success`);
+    });
 
     this.service.registMessageHander(this.channelName, this.sendSuccessMessage);
     this.client.on("message", (msg) => {

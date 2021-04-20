@@ -1,8 +1,6 @@
 import { ApiPromise } from "@polkadot/api";
 import { add, template } from "lodash";
-import { Token, FixedPointNumber } from "@acala-network/sdk-core"
 import { ITuple } from "@polkadot/types/types";
-import { Balance, CurrencyId } from "@acala-network/types/interfaces";
 import { DispatchError } from "@polkadot/types/interfaces";
 import { ApiOptions } from "@polkadot/api/types";
 import { KeyringPair } from "@polkadot/keyring/types";
@@ -29,20 +27,6 @@ interface RequestFaucetParams {
     name: string;
     account: string;
   } & Record<string, string>;
-}
-
-export function formatToReadable(
-  num: string | number,
-  token: CurrencyId 
-): number {
-  return FixedPointNumber.fromInner(num, Token.fromCurrencyId(token).decimal).toNumber();
-}
-
-export function formatToSendable(
-  num: string | number,
-  token: CurrencyId 
-): string {
-  return new FixedPointNumber(num, Token.fromCurrencyId(token).decimal).toChainData();
 }
 
 export class Service {
@@ -116,7 +100,7 @@ export class Service {
           sendMessage(
             channel,
             params
-	      .map((item) => `${item.token}: ${formatToReadable(item.balance, this.api.createType('CurrencyId' as any, { Token: item.token }))}`)
+	      .map((item) => `${item.token}: ${item.balance}`)
               .join(", "),
             tx
           );
@@ -155,10 +139,7 @@ export class Service {
       return {
         token: token,
         balance: result[index]
-          ? formatToReadable(
-              (result[index] as Balance).toString(),
-              this.api.createType('CurrencyId' as any, { Token: token })
-            )
+          ? result[index]
           : 0,
       };
     });
@@ -233,7 +214,7 @@ export class Service {
   public buildTx(config: SendConfig) {
     return this.api.tx.utility.batch(
       config.map(({ token, balance, dest }) =>
-        this.api.tx.currencies.transfer(dest, { token: token }, balance)
+        this.api.tx.currencies.transfer(dest, token, balance)
       )
     );
   }
@@ -291,7 +272,7 @@ export class Service {
     // check build tx
     const params = strategyDetail.amounts.map((item) => ({
       token: item.asset,
-      balance: formatToSendable(item.amount, this.api.createType('CurrencyId' as any, { Token: item.asset })),
+      balance: item.amount,
       dest: address,
     }));
 

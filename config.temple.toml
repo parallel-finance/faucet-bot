@@ -57,11 +57,11 @@ Usage:
 """
 balance = "<%= account %> The faucet has ${balance} remaining."
 success = """
-  Sent <%= account %> <%= amount %>. [View on Subscan](https://acala-testnet.subscan.io/extrinsic/<%= tx %>)
+  Sent <%= account %> <%= amount %>. [View on Subscan](https://parallel-testnet.subscan.io/extrinsic/<%= tx %>)
 """
 
 riotSuccess = """
-  Sent <%= account %> <%= amount %>. <a href="https://acala-testnet.subscan.io/extrinsic/<%= tx %>">Viewd on Subscan</a>
+  Sent <%= account %> <%= amount %>. <a href="https://parallel-testnet.subscan.io/extrinsic/<%= tx %>">Viewd on Subscan</a>
 """
 
 [template.error]
