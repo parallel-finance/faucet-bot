@@ -18,6 +18,10 @@
   "Timestamp": "u64",
   "Public": "AccountId",
   "PriceDetail": "(Price, Timestamp)",
+  "PalletId": "MultiAddress",
+  "Rate": "FixedU128",
+  "Ratio": "Permill",
+  "Multiplier": "FixedU128",
   "Payload": {
     "list": "Vec<PayloadDetail>",
     "public": "Public"
