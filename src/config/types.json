@@ -5,7 +5,6 @@
     "_enum": [
       "DOT",
       "KSM",
-      "BTC",
       "USDT",
       "xDOT",
       "Native"
@@ -14,7 +13,7 @@
   "CurrencyIdOf": "CurrencyId",
   "Amount": "i128",
   "AmountOf": "Amount",
-  "Price": "u128",
+  "Price": "FixedU128",
   "Timestamp": "u64",
   "Public": "AccountId",
   "PriceDetail": "(Price, Timestamp)",
@@ -33,7 +32,7 @@
   },
   "BorrowSnapshot": {
     "principal": "Balance",
-    "interestIndex": "u128"
+    "borrowIndex": "u128"
   },
   "EarnedSnapshot": {
     "totalEarnedPrior": "Balance",
@@ -42,5 +41,36 @@
   "PendingBalance": {
     "balance": "Balance",
     "timestamp": "Moment"
+  },
+  "WaitingForLiquidation": {
+    "accountId": "Address",
+    "liquidateToken": "CurrencyId",
+    "collateralToken": "CurrencyId",
+    "repayAmount": "Balance"
+  },
+  "OracleKey": "CurrencyId",
+  "OracleValue": "FixedU128",
+  "MomentOf": "Moment",
+  "TimestampedValue": {
+    "value": "OracleValue",
+    "timestamp": "Moment"
+  },
+  "TimestampedValueOf": "TimestampedValue",
+  "RpcDataProviderId": "Text",
+  "DataProviderId": {
+    "_enum": [
+      "Aggregated"
+    ]
+  },
+  "OrderedSet": "Vec<AccountId>",
+  "InterestRateModel": {
+    "baseRatePerBlock": "Rate",
+    "multiplier_perBlock": "Multiplier",
+    "jumpMultiplierPerBlock": "Multiplier",
+    "kink": "Ratio"
+  },
+  "UnstakeInfo": {
+    "amount": "u128",
+    "blockNumber": "u64"
   }
 }
