@@ -214,7 +214,7 @@ export class Service {
   public buildTx(config: SendConfig) {
     return this.api.tx.utility.batch(
       config.map(({ token, balance, dest }) =>
-        this.api.tx.currencies.transfer(dest, token, balance)
+        this.api.tx.currencies.transfer(dest, token, `${balance}000000000000`)
       )
     );
   }
