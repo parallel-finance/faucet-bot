@@ -7,9 +7,9 @@ redis = "redis://127.0.0.1:6379"
 maxPendingCount = 20
 
 [faucet]
-endpoint = "wss://testnet-rpc.parallel.fi" # your endpoint
+endpoint = "wss://testnet-rpc.parallel.fi"
 precision = 18
-assets = ['KSM', 'USDT'] # your assets
+assets = ['KSM', 'USDT']
 
 [faucet.account]
 mnemonic = "your mnemonic"
@@ -17,8 +17,9 @@ mnemonic = "your mnemonic"
 [faucet.strategy]
 [faucet.strategy.normal]
 amounts = [
-  { asset = 'KSM', amount = 100, decimals = '1000000000000' },
-  { asset = 'USDT', amount = 2000, decimals = '1000000000000' }
+  { asset = 'KSM', amount = 10, decimals = '1000000000000000000' },
+  { asset = 'USDT', amount = 100, decimals = '1000000000000000000' },
+  { asset = 'Native', amount = 10, decimals = '1000000000000000000' },
 ]
 limit = 2
 frequency = ["1", "day"]
