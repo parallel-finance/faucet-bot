@@ -18,7 +18,7 @@ export interface Config {
     strategy: {
       [k in string]: {
         checkAccount: boolean;
-        amounts: { asset: string; amount: number }[];
+        amounts: { asset: string; amount: number, decimals: string }[];
         limit: number;
         frequency: [string, OpUnitType];
       };

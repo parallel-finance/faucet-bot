@@ -11,6 +11,7 @@ import { SendConfig, MessageHandler } from "../types";
 import { TaskQueue, TaskData } from "./task-queue";
 import logger from "../util/logger";
 import { Deferred } from "../util/deferred";
+import BN from 'bn.js';
 
 interface FaucetServiceConfig {
   account: KeyringPair;
@@ -100,7 +101,7 @@ export class Service {
           sendMessage(
             channel,
             params
-	      .map((item) => `${item.token}: ${item.balance}`)
+	      .map((item) => `${item.token}: ${item.amount}`)
               .join(", "),
             tx
           );
@@ -214,7 +215,7 @@ export class Service {
   public buildTx(config: SendConfig) {
     return this.api.tx.utility.batch(
       config.map(({ token, balance, dest }) =>
-        this.api.tx.currencies.transfer(dest, token, `${balance}000000000000`)
+        this.api.tx.currencies.transfer(dest, token, balance)
       )
     );
   }
@@ -272,7 +273,8 @@ export class Service {
     // check build tx
     const params = strategyDetail.amounts.map((item) => ({
       token: item.asset,
-      balance: item.amount,
+      amount: item.amount,
+      balance: new BN(item.amount.toString(), 10).mul(new BN(item.decimals, 10)).toString(10),
       dest: address,
     }));
 
