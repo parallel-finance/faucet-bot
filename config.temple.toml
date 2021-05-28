@@ -17,8 +17,8 @@ mnemonic = "your mnemonic"
 [faucet.strategy]
 [faucet.strategy.normal]
 amounts = [
-  { asset = 'KSM', amount = 100 },
-  { asset = 'USDT', amount = 2000 }
+  { asset = 'KSM', amount = 100, decimals = 1000000000000000000 },
+  { asset = 'USDT', amount = 2000, decimals = 1000000000000000000 }
 ]
 limit = 2
 frequency = ["1", "day"]

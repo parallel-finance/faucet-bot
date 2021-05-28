@@ -38,9 +38,7 @@ async function run() {
 
   const options: ApiOptions = {
     provider: provider,
-    types: {
-        ...types,
-    },
+    ...types,
   };
 
   await service.connect(options);
