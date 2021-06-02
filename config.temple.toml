@@ -3,57 +3,57 @@
 url = "redis://127.0.0.1:6379"
 
 [task]
-redis = "redis://127.0.0.1:6379"
 maxPendingCount = 20
+redis           = "redis://127.0.0.1:6379"
 
 [faucet]
-endpoint = "wss://testnet-rpc.parallel.fi"
+assets    = ['KSM', 'USDT']
+endpoint  = "wss://testnet-rpc.parallel.fi"
 precision = 18
-assets = ['KSM', 'USDT']
 
 [faucet.account]
 mnemonic = "your mnemonic"
-  
+
 [faucet.strategy]
 [faucet.strategy.normal]
-amounts = [
-  { asset = 'KSM', amount = 10, decimals = '1000000000000000000' },
-  { asset = 'USDT', amount = 100, decimals = '1000000000000000000' },
-  { asset = 'Native', amount = 10, decimals = '1000000000000000000' },
+amounts   = [
+  { asset = 'KSM', amount = 10, decimals = '1000000000000' },
+  { asset = 'USDT', amount = 100, decimals = '1000000000000' },
+  { asset = 'Native', amount = 10, decimals = '1000000000000' },
 ]
-limit = 2
 frequency = ["1", "day"]
+limit     = 2
 
 [channel]
 [channel.api]
-port = 3000
-limit = 2
 frequency = ["1", "day"]
+limit     = 2
+port      = 3000
 
 [channel.matrix]
-token = "TEST_TOKEN"
-userId = "@test-bot:matrix.org"
-limit = 2
+enable    = false                  # No Matrix server yet
 frequency = ["1", "day"]
-enable = false # No Matrix server yet
+limit     = 2
+token     = "TEST_TOKEN"
+userId    = "@test-bot:matrix.org"
 
 [channel.discord]
 activeChannelName = 'faucet-bot'
-token = "your-token"
-limit = 2
-frequency = ["1", "day"]
-enable = true
+enable            = true
+frequency         = ["1", "day"]
+limit             = 2
+token             = "your-token"
 
 [template]
-usage = """
+balance = "<%= account %> The faucet has ${balance} remaining."
+success = """
+  Sent <%= account %> <%= amount %>. [View on Subscan](https://parallel-testnet.subscan.io/extrinsic/<%= tx %>)
+"""
+usage   = """
 Usage:
   !balance - Get the faucet's balance.
   !drip <Address> - Send Test Tokens to <Address>.
   !faucet - Prints usage information.
-"""
-balance = "<%= account %> The faucet has ${balance} remaining."
-success = """
-  Sent <%= account %> <%= amount %>. [View on Subscan](https://parallel-testnet.subscan.io/extrinsic/<%= tx %>)
 """
 
 riotSuccess = """
@@ -61,11 +61,12 @@ riotSuccess = """
 """
 
 [template.error]
-"COMMON_ERROR" = "<%= account %> something error, please check your input."
-"PADDING_TASK_MAX" = "Fauct is busy, please retry later."
-"LIMIT" = "<%= account %> has reached their quota. Only request 2 per 1 day."
-"NO_STRATEGY" = "No strategy found."
-"CHECK_TX_FAILED" = "Build Extrinsic Failed"
-"CHECK_LIMIT_FAILED" = "Check Limit Error"
+"CHECK_LIMIT_FAILED"  = "Check Limit Error"
+"CHECK_TX_FAILED"     = "Build Extrinsic Failed"
+"COMMON_ERROR"        = "<%= account %> something error, please check your input."
+"INSERT_TASK_FAILED"  = "Insert Task Error"
+"LIMIT"               = "<%= account %> has reached their quota. Only request 2 per 1 day."
+"NO_STRATEGY"         = "No strategy found."
+"PADDING_TASK_MAX"    = "Fauct is busy, please retry later."
 "UPDATE_LIMIT_FAILED" = "Update Limit Error"
-"INSERT_TASK_FAILED" = "Insert Task Error"
+
