@@ -24,6 +24,10 @@
             "symbol": "CurrencyId",
             "timestamp": "Moment"
         },
+        "Deposits": {
+            "voucherBalance": "Balance",
+            "isCollateral": "bool"
+        },
         "BorrowSnapshot": {
             "principal": "Balance",
             "borrowIndex": "u128"
@@ -55,15 +59,21 @@
             "_enum": ["Aggregated"]
         },
         "OrderedSet": "Vec<AccountId>",
-        "InterestRateModel": {
+        "JumpModel": {
             "baseRate": "Rate",
-            "kinkRate": "Rate",
+            "jumpRate": "Rate",
             "fullRate": "Rate",
-            "kinkUtilization": "Ratio"
+            "jumpUtilization": "Ratio"
+        },
+        "CurveModel": {
+            "baseRate": "Rate"
+        },
+        "InterestRateModel": {
+            "_enum": ["JumpModel", "CurveModel"]
         },
         "UnstakeInfo": {
-            "amount": "u128",
-            "blockNumber": "u64"
+            "amount": "Balance",
+            "blockNumber": "u32"
         },
         "OrmlAccountData": {
             "free": "Balance",
