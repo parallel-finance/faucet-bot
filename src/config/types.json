@@ -3,7 +3,7 @@
         "Address": "MultiAddress",
         "LookupSource": "MultiAddress",
         "CurrencyId": {
-            "_enum": ["DOT", "KSM", "USDT", "xDOT", "xKSM", "Native"]
+            "_enum": ["DOT", "KSM", "USDT", "xDOT", "xKSM", "HKO", "PARA"]
         },
         "CurrencyIdOf": "CurrencyId",
         "Amount": "i128",
@@ -35,6 +35,17 @@
         "EarnedSnapshot": {
             "totalEarnedPrior": "Balance",
             "exchangeRatePrior": "u128"
+        },
+        "Market": {
+            "collateralFactor": "Ratio",
+            "reserveFactor": "Ratio",
+            "closeFactor": "Ratio",
+            "liquidateIncentive": "Rate",
+            "rateModel": "InterestRateModel",
+            "state": "MarketState"
+        },
+        "MarketState": {
+            "_enum": ["Active", "Pending", "Supervision"]
         },
         "PendingBalance": {
             "balance": "Balance",
@@ -69,11 +80,15 @@
             "baseRate": "Rate"
         },
         "InterestRateModel": {
-            "_enum": ["JumpModel", "CurveModel"]
+            "_enum": {
+                "JumpModel": "JumpModel",
+                "CurveModel": "CurveModel"
+            }
         },
         "UnstakeInfo": {
             "amount": "Balance",
-            "blockNumber": "u32"
+            "blockNumber": "u32",
+            "eraIndex": "Option<u32>"
         },
         "OrmlAccountData": {
             "free": "Balance",
