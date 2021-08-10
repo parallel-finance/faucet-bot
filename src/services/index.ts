@@ -164,9 +164,10 @@ export class Service {
             .account(this.account.address)
             .then((balance) => balance.freeBalance.toHuman())
         } else if (['Parallel', 'Heiko'].includes(network)) {
-          return (this.paraApi as any).derive.currencies
-            .balance(this.account.address, name)
-            .then((balance: any) => balance.toHuman())
+          return (this.paraApi as any).derive.currencies.balance(
+            this.account.address,
+            name
+          )
         } else {
           throw new Error(`invalid token network: ${network}`)
         }
@@ -175,7 +176,7 @@ export class Service {
 
     return this.config.assets.map((token, index) => {
       return {
-        token: token,
+        token: token.name,
         balance: result[index] ? result[index] : '0'
       }
     })
