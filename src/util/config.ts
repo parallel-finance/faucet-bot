@@ -9,16 +9,21 @@ export interface Config {
     }
   }
   faucet: {
-    endpoint: string
-    precision: number
-    assets: string[]
+    relayEndpoint: string
+    paraEndpoint: string
+    assets: { name: string; network: string }[]
     account: {
       mnemonic: string
     }
     strategy: {
       [k in string]: {
         checkAccount: boolean
-        amounts: { asset: string; amount: number; decimals: string }[]
+        amounts: {
+          asset: string
+          network: string
+          amount: number
+          decimals: string
+        }[]
         limit: number
         frequency: [string, OpUnitType]
       }

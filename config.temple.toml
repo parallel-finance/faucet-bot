@@ -7,9 +7,13 @@ maxPendingCount = 20
 redis           = "redis://127.0.0.1:6379"
 
 [faucet]
-assets    = ['KSM', 'USDT']
-endpoint  = "wss://testnet-rpc.parallel.fi"
-precision = 18
+assets        = [
+  { name = 'KSM', network = 'Kusama' },
+  { name = 'USDT', network = 'Heiko' },
+  { name = 'HKO', network = 'Heiko' },
+]
+paraEndpoint  = "wss://testnet-rpc.parallel.fi"
+relayEndpoint = "wss://testnet-relay-rpc.parallel.fi"
 
 [faucet.account]
 mnemonic = "your mnemonic"
@@ -17,9 +21,9 @@ mnemonic = "your mnemonic"
 [faucet.strategy]
 [faucet.strategy.normal]
 amounts   = [
-  { asset = 'KSM', amount = 100, decimals = '1000000000000' },
-  { asset = 'USDT', amount = 1000, decimals = '1000000' },
-  { asset = 'HKO', amount = 10, decimals = '1000000000000' },
+  { asset = 'KSM', network = 'Kusama', amount = 100, decimals = '1000000000000' },
+  { asset = 'USDT', network = 'Heiko', amount = 1000, decimals = '1000000' },
+  { asset = 'HKO', network = 'Heiko', amount = 10, decimals = '1000000000000' },
 ]
 frequency = ["1", "day"]
 limit     = 5
@@ -69,4 +73,3 @@ riotSuccess = """
 "NO_STRATEGY"         = "No strategy found."
 "PADDING_TASK_MAX"    = "Fauct is busy, please retry later."
 "UPDATE_LIMIT_FAILED" = "Update Limit Error"
-

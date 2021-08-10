@@ -1,17 +1,16 @@
-import { ApiPromise } from '@polkadot/api'
-import { add, template } from 'lodash'
-import { ITuple } from '@polkadot/types/types'
-import { DispatchError } from '@polkadot/types/interfaces'
-import { ApiOptions } from '@polkadot/api/types'
+import { options } from '@parallel-finance/api'
+import { ApiPromise, WsProvider } from '@polkadot/api'
 import { KeyringPair } from '@polkadot/keyring/types'
-
-import { Config } from '../util/config'
-import { Storage } from '../util/storage'
-import { SendConfig, MessageHandler } from '../types'
-import { TaskQueue, TaskData } from './task-queue'
-import logger from '../util/logger'
-import { Deferred } from '../util/deferred'
+import { DispatchError } from '@polkadot/types/interfaces'
+import { ITuple } from '@polkadot/types/types'
 import BN from 'bn.js'
+import { template } from 'lodash'
+import { MessageHandler, SendConfig } from '../types'
+import { Config } from '../util/config'
+import { Deferred } from '../util/deferred'
+import logger from '../util/logger'
+import { Storage } from '../util/storage'
+import { TaskData, TaskQueue } from './task-queue'
 
 interface FaucetServiceConfig {
   account: KeyringPair
@@ -31,7 +30,8 @@ interface RequestFaucetParams {
 }
 
 export class Service {
-  public api!: ApiPromise
+  public paraApi!: ApiPromise
+  public relayApi!: ApiPromise
   private account: KeyringPair
   private template: Config['template']
   private config: Config['faucet']
@@ -59,29 +59,58 @@ export class Service {
     this.onDisconnected = this.onDisconnected.bind(this)
   }
 
+  private get isConnected() {
+    return this.relayApi.isConnected && this.paraApi.isConnected
+  }
+
+  private get isDisconnected() {
+    return !this.relayApi.isConnected || !this.paraApi.isConnected
+  }
+
   private onConnected() {
-    if (this.killTimer) {
-      clearTimeout(this.killTimer)
-      this.killTimer = null
-    }
+    setTimeout(() => {
+      if (this.isConnected) {
+        if (this.killTimer) {
+          clearTimeout(this.killTimer)
+          this.killTimer = null
+        }
+      }
+    }, 0)
   }
 
   private onDisconnected() {
-    this.killTimer = setTimeout(() => {
-      process.exit(1)
-    }, this.killCountdown)
+    if (this.isDisconnected) {
+      if (!this.killTimer) {
+        this.killTimer = setTimeout(() => {
+          process.exit(1)
+        }, this.killCountdown)
+      }
+    }
   }
 
-  public async connect(options: ApiOptions) {
-    this.api = await ApiPromise.create(options)
-
-    await this.api.isReady.catch(() => {
-      throw new Error('connect failed')
+  public async connect(config: Config['faucet']) {
+    this.relayApi = new ApiPromise({
+      provider: new WsProvider(config.relayEndpoint)
     })
 
-    this.api.on('disconnected', this.onDisconnected)
+    this.paraApi = new ApiPromise(
+      options({
+        provider: new WsProvider(config.paraEndpoint)
+      })
+    )
 
-    this.api.on('connected', this.onConnected)
+    this.paraApi.on('connected', this.onConnected)
+    this.relayApi.on('connected', this.onConnected)
+    this.paraApi.on('disconnected', this.onDisconnected)
+    this.relayApi.on('disconnected', this.onDisconnected)
+
+    await this.relayApi.isReady.catch(() => {
+      throw new Error('relaychain connect failed')
+    })
+
+    await this.paraApi.isReady.catch(() => {
+      throw new Error('parachain connect failed')
+    })
 
     this.task.process((task: TaskData) => {
       const { address, channel, strategy, params } = task
@@ -129,91 +158,127 @@ export class Service {
 
   public async queryBalance() {
     const result = await Promise.all(
-      this.config.assets.map((token) =>
-        (this.api as any).derive.currencies.balance(this.account.address, {
-          Token: token
-        })
-      )
+      this.config.assets.map(({ name, network }) => {
+        if (['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)) {
+          return this.relayApi.derive.balances
+            .account(this.account.address)
+            .then((balance) => balance.freeBalance.toHuman())
+        } else if (['Parallel', 'Heiko'].includes(network)) {
+          return (this.paraApi as any).derive.currencies
+            .balance(this.account.address, name)
+            .then((balance: any) => balance.toHuman())
+        } else {
+          throw new Error(`invalid token network: ${network}`)
+        }
+      })
     )
 
     return this.config.assets.map((token, index) => {
       return {
         token: token,
-        balance: result[index] ? result[index] : 0
+        balance: result[index] ? result[index] : '0'
       }
     })
   }
 
   public async getChainName() {
-    return this.api.rpc.system.chain()
+    return this.paraApi.rpc.system.chain()
   }
 
   public async sendTokens(config: SendConfig) {
     const deferred = new Deferred<string>()
-    const tx = this.buildTx(config)
-    const sigendTx = await tx.signAsync(this.account)
 
-    const unsub = await sigendTx
-      .send((result) => {
-        if (result.isCompleted) {
-          // extra message to ensure tx success
-          let flag = true
-          let errorMessage: DispatchError['type'] = ''
+    const txs = this.buildTx(config)
+    for (const { tx, api } of txs) {
+      const sigendTx = await tx.signAsync(this.account)
 
-          for (const event of result.events) {
-            const { data, method, section } = event.event
+      const unsub = await sigendTx
+        .send((result) => {
+          if (result.isCompleted) {
+            // extra message to ensure tx success
+            let flag = true
+            let errorMessage: DispatchError['type'] = ''
 
-            if (section === 'utility' && method === 'BatchInterrupted') {
-              flag = false
-              errorMessage = 'batch error'
-              break
-            }
+            for (const event of result.events) {
+              const { data, method, section } = event.event
 
-            // if extrinsic failed
-            if (section === 'system' && method === 'ExtrinsicFailed') {
-              const [dispatchError] = data as unknown as ITuple<[DispatchError]>
-
-              // get error message
-              if (dispatchError.isModule) {
-                try {
-                  const mod = dispatchError.asModule
-                  const error = this.api.registry.findMetaError(
-                    new Uint8Array([Number(mod.index), Number(mod.error)])
-                  )
-
-                  errorMessage = `${error.section}.${error.name}`
-                } catch (error) {
-                  // swallow error
-                  errorMessage = 'Unknown error'
-                }
+              if (section === 'utility' && method === 'BatchInterrupted') {
+                flag = false
+                errorMessage = 'batch error'
+                break
               }
-              flag = false
-              break
+
+              // if extrinsic failed
+              if (section === 'system' && method === 'ExtrinsicFailed') {
+                const [dispatchError] = data as unknown as ITuple<
+                  [DispatchError]
+                >
+
+                // get error message
+                if (dispatchError.isModule) {
+                  try {
+                    const mod = dispatchError.asModule
+                    const error = api.registry.findMetaError(
+                      new Uint8Array([Number(mod.index), Number(mod.error)])
+                    )
+
+                    errorMessage = `${error.section}.${error.name}`
+                  } catch (error) {
+                    // swallow error
+                    errorMessage = 'Unknown error'
+                  }
+                }
+                flag = false
+                break
+              }
             }
-          }
 
-          if (flag) {
-            deferred.resolve(sigendTx.hash.toString())
-          } else {
-            deferred.reject(errorMessage)
-          }
+            if (flag) {
+              deferred.resolve(sigendTx.hash.toString())
+            } else {
+              deferred.reject(errorMessage)
+            }
 
-          unsub && unsub()
-        }
-      })
-      .catch((e) => {
-        deferred.reject(e)
-      })
+            unsub && unsub()
+          }
+        })
+        .catch((e) => {
+          deferred.reject(e)
+        })
+    }
 
     return deferred.promise
   }
 
   public buildTx(config: SendConfig) {
-    return this.api.tx.utility.batch(
-      config.map(({ token, balance, dest }) =>
-        this.api.tx.currencies.transfer(dest, token, balance)
-      )
+    const relayAssets = config.filter(({ network }) =>
+      ['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)
     )
+    const paraAssets = config.filter(({ network }) =>
+      ['Heiko', 'Parallel'].includes(network)
+    )
+    const txs = []
+    if (relayAssets.length) {
+      txs.push({
+        tx: this.relayApi.tx.utility.batch(
+          relayAssets.map(({ token, balance, dest }) =>
+            this.relayApi.tx.balances.transfer(dest, balance)
+          )
+        ),
+        api: this.relayApi
+      })
+    }
+    if (paraAssets.length) {
+      txs.push({
+        tx: this.paraApi.tx.utility.batch(
+          paraAssets.map(({ token, balance, dest }) =>
+            this.paraApi.tx.currencies.transfer(dest, token, balance)
+          )
+        ),
+        api: this.paraApi
+      })
+    }
+    return txs
   }
 
   public usage() {
@@ -280,6 +345,7 @@ export class Service {
     const params = strategyDetail.amounts.map((item) => ({
       token: item.asset,
       amount: item.amount,
+      network: item.network,
       balance: new BN(item.amount.toString(), 10)
         .mul(new BN(item.decimals, 10))
         .toString(10),
