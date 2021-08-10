@@ -1,7 +1,6 @@
 import { Keyring, WsProvider } from '@polkadot/api'
 import { assert } from '@polkadot/util'
 import { waitReady } from '@polkadot/wasm-crypto'
-import { options } from '@parallel-finance/api'
 
 import { loadConfig } from './util/config'
 import logger from './util/logger'
@@ -16,7 +15,8 @@ async function run() {
   const config = loadConfig()
 
   assert(config.faucet.account.mnemonic, 'mnemonic need')
-  assert(config.faucet.endpoint, 'endpoint need')
+  assert(config.faucet.paraEndpoint, 'para endpoint need')
+  assert(config.faucet.relayEndpoint, 'relay endpoint need')
 
   await waitReady()
 
@@ -33,9 +33,7 @@ async function run() {
     template: config.template
   })
 
-  const provider = new WsProvider(config.faucet.endpoint)
-
-  await service.connect(options({ provider }))
+  await service.connect(config.faucet)
 
   const chainName = await service.getChainName()
 
