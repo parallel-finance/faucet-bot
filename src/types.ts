@@ -1,5 +1,3 @@
-import Balance from '@polkadot/types/interfaces'
-
 export type LimitConfig = Map<string, number>
 
 export type SendConfig = {
