@@ -1,7 +1,7 @@
 import { Keyring, WsProvider } from '@polkadot/api'
 import { assert } from '@polkadot/util'
 import { waitReady } from '@polkadot/wasm-crypto'
-import { ApiOptions } from '@polkadot/api/types'
+import { options } from '@parallel-finance/api'
 
 import { loadConfig } from './util/config'
 import logger from './util/logger'
@@ -11,7 +11,6 @@ import api from './channel/api'
 import { Service } from './services'
 import { MatrixChannel } from './channel/matrix'
 import { DiscordChannel } from './channel/discord'
-import types from './config/types.json'
 
 async function run() {
   const config = loadConfig()
@@ -36,12 +35,7 @@ async function run() {
 
   const provider = new WsProvider(config.faucet.endpoint)
 
-  const options: ApiOptions = {
-    provider: provider,
-    ...types
-  }
-
-  await service.connect(options)
+  await service.connect(options({ provider }))
 
   const chainName = await service.getChainName()
 
