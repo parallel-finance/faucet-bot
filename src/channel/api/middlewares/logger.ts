@@ -1,23 +1,23 @@
-import { Logger, LeveledLogMethod } from "winston";
-import { Middleware } from "koa";
+import { Logger, LeveledLogMethod } from 'winston'
+import { Middleware } from 'koa'
 
-import logger from "../../../util/logger";
+import logger from '../../../util/logger'
 
 const getLoggerLevel = (code: number, logger: Logger): LeveledLogMethod => {
   switch (Math.floor(code / 100)) {
     case 5: {
-      return logger.error;
+      return logger.error
     }
     case 4: {
-      return logger.warn;
+      return logger.warn
     }
   }
 
-  return logger.info;
-};
+  return logger.info
+}
 
 export const loggerMiddware: Middleware = async (ctx, next) => {
-  await next();
+  await next()
   getLoggerLevel(
     ctx.status,
     logger
@@ -26,6 +26,6 @@ export const loggerMiddware: Middleware = async (ctx, next) => {
     url: ctx.originalUrl,
     params: ctx.request.body,
     result: ctx.response.body,
-    status: ctx.status,
-  });
-};
+    status: ctx.status
+  })
+}

@@ -1,13 +1,10 @@
-import { Storage } from "../util/storage";
-import { OpUnitType } from "dayjs";
+import { Storage } from '../util/storage'
+import { OpUnitType } from 'dayjs'
 
 export class ChannelBase {
-    constructor(
-        protected channelName: string,
-        protected storage: Storage
-    ) {}
+  constructor(protected channelName: string, protected storage: Storage) {}
 
-    getCommand (msg: string) {
-        return msg.trim().split(" ");
-    }
+  getCommand(msg: string) {
+    return msg.trim().split(' ')
+  }
 }
