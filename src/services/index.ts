@@ -164,7 +164,7 @@ export class Service {
             .account(this.account.address)
             .then((balance) => balance.freeBalance.toHuman())
         } else if (['Parallel', 'Heiko'].includes(network)) {
-          return (this.paraApi as any).derive.currencies.balance(
+          return (this.paraApi as any).assets.assets.balance(
             this.account.address,
             name
           )
@@ -273,7 +273,7 @@ export class Service {
       txs.push({
         tx: this.paraApi.tx.utility.batch(
           paraAssets.map(({ token, balance, dest }) =>
-            this.paraApi.tx.currencies.transfer(dest, token, balance)
+            this.paraApi.tx.assets.transfer(dest, token, balance)
           )
         ),
         api: this.paraApi
