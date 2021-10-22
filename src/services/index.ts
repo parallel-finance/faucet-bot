@@ -164,7 +164,7 @@ export class Service {
             .account(this.account.address)
             .then((balance) => balance.freeBalance.toHuman())
         } else if (['Parallel', 'Heiko'].includes(network)) {
-          return (this.paraApi as any).assets.assets.balance(
+          return (this.paraApi as any).derive.assets.balance(
             this.account.address,
             name
           )
