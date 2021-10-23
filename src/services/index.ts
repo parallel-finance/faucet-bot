@@ -260,6 +260,7 @@ export class Service {
     )
     const txs = []
     if (relayAssets.length) {
+      console.log("relaychain", relayAssets)
       txs.push({
         tx: this.relayApi.tx.utility.batch(
           relayAssets.map(({ balance, dest }) =>
@@ -270,6 +271,7 @@ export class Service {
       })
     }
     if (paraAssets.length) {
+      console.log("parachain", paraAssets)
       txs.push({
         tx: this.paraApi.tx.utility.batch(
           paraAssets.map(({ assetId, balance, dest }) => {
