@@ -19,6 +19,7 @@ export interface Config {
       [k in string]: {
         checkAccount: boolean
         amounts: {
+          token: string
           assetId: number
           network: string
           amount: number

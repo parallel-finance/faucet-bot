@@ -130,7 +130,7 @@ export class Service {
 
           sendMessage(
             channel,
-            params.map((item) => `${item.assetId}: ${item.amount}`).join(', '),
+            params.map((item) => `${item.token}: ${item.amount}`).join(', '),
             tx
           )
         })
@@ -351,6 +351,7 @@ export class Service {
     // check build tx
     const params = strategyDetail.amounts.map((item) => ({
       assetId: item.assetId,
+      token: item.token,
       amount: item.amount,
       network: item.network,
       balance: new BN(item.amount.toString(), 10)

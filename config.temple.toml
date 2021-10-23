@@ -21,9 +21,9 @@ mnemonic = "your mnemonic"
 [faucet.strategy]
 [faucet.strategy.normal]
 amounts   = [
-  { asset = 'KSM', network = 'Kusama', amount = 100, decimals = '1000000000000' },
-  { asset = 'USDT', network = 'Heiko', amount = 1000, decimals = '1000000' },
-  { asset = 'HKO', network = 'Heiko', amount = 10, decimals = '1000000000000' },
+  { assetId = 100, token = 'KSM', network = 'Kusama', amount = 100, decimals = '1000000000000' },
+  { assetId = 102, token = 'USDT', network = 'Heiko', amount = 1000, decimals = '1000000' },
+  { assetId = 0, token = 'HKO', network = 'Heiko', amount = 10, decimals = '1000000000000' },
 ]
 frequency = ["1", "day"]
 limit     = 5
