@@ -272,9 +272,15 @@ export class Service {
     if (paraAssets.length) {
       txs.push({
         tx: this.paraApi.tx.utility.batch(
-          paraAssets.map(({ assetId, balance, dest }) =>
-            this.paraApi.tx.assets.transfer(assetId, dest, balance)
-          )
+          paraAssets.map(({ assetId, balance, dest }) => {
+            // HKO/PARA
+            if (assetId == 0 || assetId == 1) {
+              return this.paraApi.tx.balances.transfer(dest, balance)
+            }
+            // KSM/USDT ...
+            return this.paraApi.tx.assets.transfer(assetId, dest, balance)
+          }
+        )
         ),
         api: this.paraApi
       })
