@@ -11,7 +11,7 @@ export interface Config {
   faucet: {
     relayEndpoint: string
     paraEndpoint: string
-    assets: { name: string; network: string }[]
+    assets: { assetId: number; network: string }[]
     account: {
       mnemonic: string
     }
@@ -19,7 +19,7 @@ export interface Config {
       [k in string]: {
         checkAccount: boolean
         amounts: {
-          asset: string
+          assetId: number
           network: string
           amount: number
           decimals: string

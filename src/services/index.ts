@@ -130,7 +130,7 @@ export class Service {
 
           sendMessage(
             channel,
-            params.map((item) => `${item.token}: ${item.amount}`).join(', '),
+            params.map((item) => `${item.assetId}: ${item.amount}`).join(', '),
             tx
           )
         })
@@ -158,15 +158,15 @@ export class Service {
 
   public async queryBalance() {
     const result = await Promise.all(
-      this.config.assets.map(({ name, network }) => {
+      this.config.assets.map(({ assetId, network }) => {
         if (['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)) {
           return this.relayApi.derive.balances
             .account(this.account.address)
             .then((balance) => balance.freeBalance.toHuman())
         } else if (['Parallel', 'Heiko'].includes(network)) {
-          return (this.paraApi as any).derive.currencies.balance(
-            this.account.address,
-            name
+          return (this.paraApi as any).derive.assets.balance(
+            assetId,
+            this.account.address
           )
         } else {
           throw new Error(`invalid token network: ${network}`)
@@ -176,7 +176,7 @@ export class Service {
 
     return this.config.assets.map((token, index) => {
       return {
-        token: token.name,
+        token: token,
         balance: result[index] ? result[index] : '0'
       }
     })
@@ -262,7 +262,7 @@ export class Service {
     if (relayAssets.length) {
       txs.push({
         tx: this.relayApi.tx.utility.batch(
-          relayAssets.map(({ token, balance, dest }) =>
+          relayAssets.map(({ balance, dest }) =>
             this.relayApi.tx.balances.transfer(dest, balance)
           )
         ),
@@ -272,9 +272,15 @@ export class Service {
     if (paraAssets.length) {
       txs.push({
         tx: this.paraApi.tx.utility.batch(
-          paraAssets.map(({ token, balance, dest }) =>
-            this.paraApi.tx.currencies.transfer(dest, token, balance)
-          )
+          paraAssets.map(({ assetId, balance, dest }) => {
+            // HKO/PARA
+            if (assetId == 0 || assetId == 1) {
+              return this.paraApi.tx.balances.transfer(dest, balance)
+            }
+            // KSM/USDT ...
+            return this.paraApi.tx.assets.transfer(assetId, dest, balance)
+          }
+        )
         ),
         api: this.paraApi
       })
@@ -344,7 +350,7 @@ export class Service {
 
     // check build tx
     const params = strategyDetail.amounts.map((item) => ({
-      token: item.asset,
+      assetId: item.assetId,
       amount: item.amount,
       network: item.network,
       balance: new BN(item.amount.toString(), 10)

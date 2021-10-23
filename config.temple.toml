@@ -8,9 +8,9 @@ redis           = "redis://127.0.0.1:6379"
 
 [faucet]
 assets        = [
-  { name = 'KSM', network = 'Kusama' },
-  { name = 'USDT', network = 'Heiko' },
-  { name = 'HKO', network = 'Heiko' },
+  { name = 'KSM', assetId = 100, network = 'Kusama' },
+  { name = 'USDT', assetId = 102, network = 'Heiko' },
+  { name = 'HKO', assetId = 0, network = 'Heiko' },
 ]
 paraEndpoint  = "wss://testnet-rpc.parallel.fi"
 relayEndpoint = "wss://testnet-relay-rpc.parallel.fi"
