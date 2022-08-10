@@ -13,409 +13,410 @@ import { Storage } from '../util/storage'
 import { TaskData, TaskQueue } from './task-queue'
 
 interface FaucetServiceConfig {
-  account: KeyringPair
-  template: Config['template']
-  config: Config['faucet']
-  storage: Storage
-  task: TaskQueue
+    account: KeyringPair
+    template: Config['template']
+    config: Config['faucet']
+    storage: Storage
+    task: TaskQueue
 }
 
 interface RequestFaucetParams {
-  address: string
-  strategy: string
-  channel: {
-    name: string
-    account: string
-  } & Record<string, string>
+    address: string
+    strategy: string
+    channel: {
+        name: string
+        account: string
+    } & Record<string, string>
 }
 
 export class Service {
-  public paraApi!: ApiPromise
-  public relayApi!: ApiPromise
-  private account: KeyringPair
-  private template: Config['template']
-  private config: Config['faucet']
-  private storage: Storage
-  private task: TaskQueue
-  private sendMessageHandler!: Record<string, MessageHandler>
-  private killCountdown: number = 1000 * 60
-  private killTimer!: NodeJS.Timeout | null
+    public paraApi!: ApiPromise
+    public relayApi!: ApiPromise
+    private account: KeyringPair
+    private template: Config['template']
+    private config: Config['faucet']
+    private storage: Storage
+    private task: TaskQueue
+    private sendMessageHandler!: Record<string, MessageHandler>
+    private killCountdown: number = 1000 * 60
+    private killTimer!: NodeJS.Timeout | null
 
-  constructor({
-    account,
-    config,
-    template,
-    storage,
-    task
-  }: FaucetServiceConfig) {
-    this.account = account
-    this.config = config
-    this.template = template
-    this.storage = storage
-    this.task = task
-    this.sendMessageHandler = {}
+    constructor({
+        account,
+        config,
+        template,
+        storage,
+        task
+    }: FaucetServiceConfig) {
+        this.account = account
+        this.config = config
+        this.template = template
+        this.storage = storage
+        this.task = task
+        this.sendMessageHandler = {}
 
-    this.onConnected = this.onConnected.bind(this)
-    this.onDisconnected = this.onDisconnected.bind(this)
-  }
-
-  private get isConnected() {
-    return this.relayApi.isConnected && this.paraApi.isConnected
-  }
-
-  private get isDisconnected() {
-    return !this.relayApi.isConnected || !this.paraApi.isConnected
-  }
-
-  private onConnected() {
-    setTimeout(() => {
-      if (this.isConnected) {
-        if (this.killTimer) {
-          clearTimeout(this.killTimer)
-          this.killTimer = null
-        }
-      }
-    }, 0)
-  }
-
-  private onDisconnected() {
-    if (this.isDisconnected) {
-      if (!this.killTimer) {
-        this.killTimer = setTimeout(() => {
-          process.exit(1)
-        }, this.killCountdown)
-      }
+        this.onConnected = this.onConnected.bind(this)
+        this.onDisconnected = this.onDisconnected.bind(this)
     }
-  }
 
-  public async connect(config: Config['faucet']) {
-    this.relayApi = new ApiPromise({
-      provider: new WsProvider(config.relayEndpoint)
-    })
+    private get isConnected() {
+        return this.relayApi.isConnected && this.paraApi.isConnected
+    }
 
-    this.paraApi = new ApiPromise(
-      options({
-        provider: new WsProvider(config.paraEndpoint)
-      })
-    )
+    private get isDisconnected() {
+        return !this.relayApi.isConnected || !this.paraApi.isConnected
+    }
 
-    this.paraApi.on('connected', this.onConnected)
-    this.relayApi.on('connected', this.onConnected)
-    this.paraApi.on('disconnected', this.onDisconnected)
-    this.relayApi.on('disconnected', this.onDisconnected)
+    private onConnected() {
+        setTimeout(() => {
+            if (this.isConnected) {
+                if (this.killTimer) {
+                    clearTimeout(this.killTimer)
+                    this.killTimer = null
+                }
+            }
+        }, 0)
+    }
 
-    await this.relayApi.isReady.catch(() => {
-      throw new Error('relaychain connect failed')
-    })
-
-    await this.paraApi.isReady.catch(() => {
-      throw new Error('parachain connect failed')
-    })
-
-    this.task.process((task: TaskData) => {
-      const { address, channel, strategy, params } = task
-      const account = channel.account
-      const channelName = channel.name
-      const sendMessage = this.getMessageHandler(channelName)
-
-      return this.sendTokens(params)
-        .then((tx: string) => {
-          logger.info(
-            `send success, required from ${channelName}/${account} channel with address:${address} ${JSON.stringify(
-              task.params
-            )}`
-          )
-
-          if (!sendMessage) return
-
-          sendMessage(
-            channel,
-            params.map((item) => `${item.token}: ${item.amount}`).join(', '),
-            tx
-          )
-        })
-        .catch(async (e) => {
-          logger.error(e)
-
-          await this.storage.decrKeyCount(`service_${strategy}_${address}`)
-
-          if (account) {
-            await this.storage.decrKeyCount(
-              `service_${strategy}_${channelName}_${account}`
-            )
-          }
-        })
-    })
-  }
-
-  public registMessageHander(channel: string, handler: MessageHandler) {
-    this.sendMessageHandler[channel] = handler
-  }
-
-  private getMessageHandler(channel: string) {
-    return this.sendMessageHandler[channel]
-  }
-
-  public async queryBalance() {
-    const result = await Promise.all(
-      this.config.assets.map(({ assetId, network }) => {
-        if (['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)) {
-          return this.relayApi.derive.balances
-            .account(this.account.address)
-            .then((balance) => balance.freeBalance.toHuman())
-        } else if (['Parallel', 'Heiko'].includes(network)) {
-          return (this.paraApi as any).derive.assets.balance(
-            assetId,
-            this.account.address
-          )
-        } else {
-          throw new Error(`invalid token network: ${network}`)
+    private onDisconnected() {
+        if (this.isDisconnected) {
+            if (!this.killTimer) {
+                this.killTimer = setTimeout(() => {
+                    process.exit(1)
+                }, this.killCountdown)
+            }
         }
-      })
-    )
+    }
 
-    return this.config.assets.map((token, index) => {
-      return {
-        token: token,
-        balance: result[index] ? result[index] : '0'
-      }
-    })
-  }
+    public async connect(config: Config['faucet']) {
+        this.relayApi = new ApiPromise({
+            provider: new WsProvider(config.relayEndpoint)
+        })
 
-  public async getChainName() {
-    return this.paraApi.rpc.system.chain()
-  }
+        this.paraApi = new ApiPromise(
+            options({
+                provider: new WsProvider(config.paraEndpoint)
+            })
+        )
 
-  public async sendTokens(config: SendConfig) {
-    const deferred = new Deferred<string>()
+        this.paraApi.on('connected', this.onConnected)
+        this.relayApi.on('connected', this.onConnected)
+        this.paraApi.on('disconnected', this.onDisconnected)
+        this.relayApi.on('disconnected', this.onDisconnected)
 
-    const txs = this.buildTx(config)
-    for (const { tx, api } of txs) {
-      const sigendTx = await tx.signAsync(this.account)
+        await this.relayApi.isReady.catch(() => {
+            throw new Error('relaychain connect failed')
+        })
 
-      const unsub = await sigendTx
-        .send((result) => {
-          if (result.isCompleted) {
-            // extra message to ensure tx success
-            let flag = true
-            let errorMessage: DispatchError['type'] = ''
+        await this.paraApi.isReady.catch(() => {
+            throw new Error('parachain connect failed')
+        })
 
-            for (const event of result.events) {
-              const { data, method, section } = event.event
+        this.task.process((task: TaskData) => {
+            const { address, channel, strategy, params } = task
+            const account = channel.account
+            const channelName = channel.name
+            const sendMessage = this.getMessageHandler(channelName)
 
-              if (section === 'utility' && method === 'BatchInterrupted') {
-                flag = false
-                errorMessage = 'batch error'
-                break
-              }
-
-              // if extrinsic failed
-              if (section === 'system' && method === 'ExtrinsicFailed') {
-                const [dispatchError] = data as unknown as ITuple<
-                  [DispatchError]
-                >
-
-                // get error message
-                if (dispatchError.isModule) {
-                  try {
-                    const mod = dispatchError.asModule
-                    const error = api.registry.findMetaError(
-                      new Uint8Array([Number(mod.index), Number(mod.error)])
+            return this.sendTokens(params)
+                .then((tx: string) => {
+                    logger.info(
+                        `send success, required from ${channelName}/${account} channel with address:${address} ${JSON.stringify(
+                            task.params
+                        )}`
                     )
 
-                    errorMessage = `${error.section}.${error.name}`
-                  } catch (error) {
-                    // swallow error
-                    errorMessage = 'Unknown error'
-                  }
+                    if (!sendMessage) return
+
+                    sendMessage(
+                        channel,
+                        params.map((item) => `${item.token}: ${item.amount}`).join(', '),
+                        tx
+                    )
+                })
+                .catch(async (e) => {
+                    logger.error(e)
+
+                    await this.storage.decrKeyCount(`service_${strategy}_${address}`)
+
+                    if (account) {
+                        await this.storage.decrKeyCount(
+                            `service_${strategy}_${channelName}_${account}`
+                        )
+                    }
+                })
+        })
+    }
+
+    public registMessageHander(channel: string, handler: MessageHandler) {
+        this.sendMessageHandler[channel] = handler
+    }
+
+    private getMessageHandler(channel: string) {
+        return this.sendMessageHandler[channel]
+    }
+
+    public async queryBalance() {
+        const result = await Promise.all(
+            this.config.assets.map(({ assetId, network }) => {
+                if (['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)) {
+                    return this.relayApi.derive.balances
+                        .account(this.account.address)
+                        .then((balance) => balance.freeBalance.toHuman())
+                } else if (['Parallel', 'Heiko'].includes(network)) {
+                    return (this.paraApi as any).derive.assets.balance(
+                        assetId,
+                        this.account.address
+                    )
+                } else {
+                    throw new Error(`invalid token network: ${network}`)
                 }
-                flag = false
-                break
-              }
-            }
+            })
+        )
 
-            if (flag) {
-              deferred.resolve(sigendTx.hash.toString())
-            } else {
-              deferred.reject(errorMessage)
+        return this.config.assets.map((token, index) => {
+            return {
+                token: token,
+                balance: result[index] ? result[index] : '0'
             }
-
-            unsub && unsub()
-          }
-        })
-        .catch((e) => {
-          deferred.reject(e)
         })
     }
 
-    return deferred.promise
-  }
-
-  public buildTx(config: SendConfig) {
-    const relayAssets = config.filter(({ network }) =>
-      ['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)
-    )
-    const paraAssets = config.filter(({ network }) =>
-      ['Heiko', 'Parallel'].includes(network)
-    )
-    const txs = []
-    if (relayAssets.length) {
-      console.log("relaychain", relayAssets)
-      txs.push({
-        tx: this.relayApi.tx.utility.batch(
-          relayAssets.map(({ balance, dest }) =>
-            this.relayApi.tx.balances.transfer(dest, balance)
-          )
-        ),
-        api: this.relayApi
-      })
+    public async getChainName() {
+        return this.paraApi.rpc.system.chain()
     }
-    if (paraAssets.length) {
-      console.log("parachain", paraAssets)
-      txs.push({
-        tx: this.paraApi.tx.utility.batch(
-          paraAssets.map(({ assetId, balance, dest }) => {
-            // HKO/PARA
-            if (assetId == 0 || assetId == 1) {
-              return this.paraApi.tx.balances.transfer(dest, balance)
-            }
-            // KSM/USDT ...
-            return this.paraApi.tx.assets.transfer(assetId, dest, balance)
-          }
+
+    public async sendTokens(config: SendConfig) {
+        const deferred = new Deferred<string>()
+
+        const txs = this.buildTx(config)
+        for (const { tx, api } of txs) {
+            const sigendTx = await tx.signAsync(this.account)
+
+            const unsub = await sigendTx
+                .send((result) => {
+                    if (result.isCompleted) {
+                        // extra message to ensure tx success
+                        let flag = true
+                        let errorMessage: DispatchError['type'] = ''
+
+                        for (const event of result.events) {
+                            const { data, method, section } = event.event
+
+                            if (section === 'utility' && method === 'BatchInterrupted') {
+                                flag = false
+                                errorMessage = 'batch error'
+                                break
+                            }
+
+                            // if extrinsic failed
+                            if (section === 'system' && method === 'ExtrinsicFailed') {
+                                const [dispatchError] = data as unknown as ITuple<
+                                    [DispatchError]
+                                >
+
+                                // get error message
+                                if (dispatchError.isModule) {
+                                    try {
+                                        const mod = dispatchError.asModule
+                                        const error = api.registry.findMetaError(
+                                            new Uint8Array([Number(mod.index), Number(mod.error)])
+                                        )
+
+                                        errorMessage = `${error.section}.${error.name}`
+                                    } catch (error) {
+                                        // swallow error
+                                        errorMessage = 'Unknown error'
+                                    }
+                                }
+                                flag = false
+                                break
+                            }
+                        }
+
+                        if (flag) {
+                            deferred.resolve(sigendTx.hash.toString())
+                        } else {
+                            deferred.reject(errorMessage)
+                        }
+
+                        unsub && unsub()
+                    }
+                })
+                .catch((e) => {
+                    deferred.reject(e)
+                })
+        }
+
+        return deferred.promise
+    }
+
+    public buildTx(config: SendConfig) {
+        const relayAssets = config.filter(({ network }) =>
+            ['Kusama', 'Polkadot', 'Westend', 'Rococo'].includes(network)
         )
-        ),
-        api: this.paraApi
-      })
-    }
-    return txs
-  }
-
-  public usage() {
-    return this.template.usage
-  }
-
-  async faucet({
-    strategy,
-    address,
-    channel
-  }: RequestFaucetParams): Promise<any> {
-    logger.info(
-      `requect faucet, ${JSON.stringify(
-        strategy
-      )}, ${address}, ${JSON.stringify(channel)}`
-    )
-
-    const strategyDetail = this.config.strategy[strategy]
-
-    const account = channel?.account
-    const channelName = channel.name
-
-    try {
-      await this.task.checkPendingTask()
-    } catch (e) {
-      throw new Error(this.getErrorMessage('PADDING_TASK_MAX'))
-    }
-
-    if (!strategyDetail) {
-      throw new Error(this.getErrorMessage('NO_STRAGEGY'))
-    }
-
-    // check account limit
-    let accountCount = 0
-    if (account && strategyDetail.checkAccount) {
-      accountCount = await this.storage.getKeyCount(
-        `service_${strategy}_${channelName}_${account}`
-      )
-    }
-
-    if (strategyDetail.limit && accountCount >= strategyDetail.limit) {
-      throw new Error(
-        this.getErrorMessage('LIMIT', { account: channel.account || address })
-      )
-    }
-
-    // check address limit
-    let addressCount = 0
-    try {
-      addressCount = await this.storage.getKeyCount(
-        `service_${strategy}_${address}`
-      )
-    } catch (e) {
-      throw new Error(this.getErrorMessage('CHECK_LIMIT_FAILED'))
-    }
-
-    if (strategyDetail.limit && addressCount >= strategyDetail.limit) {
-      throw new Error(
-        this.getErrorMessage('LIMIT', { account: channel.account || address })
-      )
-    }
-
-    // check build tx
-    const params = strategyDetail.amounts.map((item) => ({
-      assetId: item.assetId,
-      token: item.token,
-      amount: item.amount,
-      network: item.network,
-      balance: new BN(item.amount.toString(), 10)
-        .mul(new BN(item.decimals, 10))
-        .toString(10),
-      dest: address
-    }))
-
-    try {
-      this.buildTx(params)
-    } catch (e) {
-      logger.error(e)
-
-      throw new Error(this.getErrorMessage('CHECK_TX_FAILED', { error: e }))
-    }
-
-    // increase account & address limit count
-    try {
-      if (account && strategyDetail.checkAccount) {
-        await this.storage.incrKeyCount(
-          `service_${strategy}_${channelName}_${account}`,
-          strategyDetail.frequency
+        const paraAssets = config.filter(({ network }) =>
+            ['Heiko', 'Parallel'].includes(network)
         )
-      }
-
-      await this.storage.incrKeyCount(
-        `service_${strategy}_${address}`,
-        strategyDetail.frequency
-      )
-    } catch (e) {
-      throw new Error(this.getErrorMessage('UPDATE_LIMIT_FAILED'))
+        const txs = []
+        if (relayAssets.length) {
+            console.log("relaychain", relayAssets)
+            txs.push({
+                tx: this.relayApi.tx.utility.batch(
+                    relayAssets.map(({ balance, dest }) =>
+                        this.relayApi.tx.balances.transfer(dest, balance)
+                    )
+                ),
+                api: this.relayApi
+            })
+        }
+        if (paraAssets.length) {
+            console.log("parachain", paraAssets)
+            txs.push({
+                tx: this.paraApi.tx.utility.batch(
+                    paraAssets.map(({ assetId, balance, dest }) => {
+                        // HKO/PARA
+                        if (assetId == 0 || assetId == 1) {
+                            return this.paraApi.tx.balances.transfer(dest, balance)
+                        }
+                        // KSM/USDT ...
+                        return this.paraApi.tx.assets.transfer(assetId, dest, balance)
+                    }
+                    )
+                ),
+                api: this.paraApi
+            })
+        }
+        return txs
     }
 
-    try {
-      const result = await this.task.insert({
-        address,
+    public usage() {
+        return this.template.usage
+    }
+
+    async faucet({
         strategy,
-        channel,
-        params
-      })
-
-      return result
-    } catch (e) {
-      logger.error(e)
-
-      await this.storage.decrKeyCount(`service_${strategy}_${address}`)
-
-      if (account) {
-        await this.storage.decrKeyCount(
-          `service_${strategy}_${channelName}_${account}`
+        address,
+        channel
+    }: RequestFaucetParams): Promise<any> {
+        logger.info(
+            `requect faucet, ${JSON.stringify(
+                strategy
+            )}, ${address}, ${JSON.stringify(channel)}`
         )
-      }
 
-      throw new Error(this.getErrorMessage('INSERT_TASK_FAILED'))
+        const strategyDetail = this.config.strategy[strategy]
+
+        const account = channel?.account
+        const channelName = channel.name
+
+        try {
+            await this.task.checkPendingTask()
+        } catch (e) {
+            throw new Error(this.getErrorMessage('PADDING_TASK_MAX'))
+        }
+
+        if (!strategyDetail) {
+            throw new Error(this.getErrorMessage('NO_STRAGEGY'))
+        }
+
+        // check account limit
+        let accountCount = 0
+        if (account && strategyDetail.checkAccount) {
+            accountCount = await this.storage.getKeyCount(
+                `service_${strategy}_${channelName}_${account}`
+            )
+        }
+
+        if (strategyDetail.limit && accountCount >= strategyDetail.limit) {
+            throw new Error(
+                this.getErrorMessage('LIMIT', { account: channel.account || address })
+            )
+        }
+
+        // check address limit
+        let addressCount = 0
+        try {
+            addressCount = await this.storage.getKeyCount(
+                `service_${strategy}_${address}`
+            )
+        } catch (e) {
+            throw new Error(this.getErrorMessage('CHECK_LIMIT_FAILED'))
+        }
+
+        if (strategyDetail.limit && addressCount >= strategyDetail.limit) {
+            throw new Error(
+                this.getErrorMessage('LIMIT', { account: channel.account || address })
+            )
+        }
+
+        // check build tx
+        const params = strategyDetail.amounts.map((item) => ({
+            assetId: item.assetId,
+            token: item.token,
+            amount: item.amount,
+            network: item.network,
+            balance: new BN((item.amount * 2).toString(), 10)
+                .mul(new BN(item.decimals.toString(), 10))
+                .divn(2)
+                .toString(10),
+            dest: address
+        }))
+
+        try {
+            this.buildTx(params)
+        } catch (e) {
+            logger.error(e)
+
+            throw new Error(this.getErrorMessage('CHECK_TX_FAILED', { error: e }))
+        }
+
+        // increase account & address limit count
+        try {
+            if (account && strategyDetail.checkAccount) {
+                await this.storage.incrKeyCount(
+                    `service_${strategy}_${channelName}_${account}`,
+                    strategyDetail.frequency
+                )
+            }
+
+            await this.storage.incrKeyCount(
+                `service_${strategy}_${address}`,
+                strategyDetail.frequency
+            )
+        } catch (e) {
+            throw new Error(this.getErrorMessage('UPDATE_LIMIT_FAILED'))
+        }
+
+        try {
+            const result = await this.task.insert({
+                address,
+                strategy,
+                channel,
+                params
+            })
+
+            return result
+        } catch (e) {
+            logger.error(e)
+
+            await this.storage.decrKeyCount(`service_${strategy}_${address}`)
+
+            if (account) {
+                await this.storage.decrKeyCount(
+                    `service_${strategy}_${channelName}_${account}`
+                )
+            }
+
+            throw new Error(this.getErrorMessage('INSERT_TASK_FAILED'))
+        }
     }
-  }
 
-  getErrorMessage(code: string, params?: any) {
-    return template(this.template.error[code] || 'Faucet error.')(params)
-  }
+    getErrorMessage(code: string, params?: any) {
+        return template(this.template.error[code] || 'Faucet error.')(params)
+    }
 
-  getMessage(name: string, params?: any) {
-    return template(this.template[name] || 'Empty')(params)
-  }
+    getMessage(name: string, params?: any) {
+        return template(this.template[name] || 'Empty')(params)
+    }
 }
