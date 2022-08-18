@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'faucet-testnet',
+      name: 'faucet-parallel',
       script: './node_modules/.bin/ts-node',
       args: 'src/index.ts',
       instances: 1,
